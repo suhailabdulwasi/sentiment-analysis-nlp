@@ -1,0 +1,66 @@
+# Stage-1 architecture screen + reproduction of the original recipe.
+# Later stages (LR sweep, large models, seeds) are generated from stage-1
+# *validation* results by sentiment.plan so no test data influences them.
+#
+# Model choice rationale
+#  - distilroberta-base: current production architecture (reference)
+#  - roberta-base: same tokenizer, 2x depth; standard strong baseline
+#  - twitter-roberta-base-2022-154m: RoBERTa further pre-trained on 154M tweets
+#    up to 2022 (TimeLMs) -> in-domain language, hashtags, slang
+#  - bertweet-base: RoBERTa architecture pre-trained from scratch on 850M tweets;
+#    strong published TweetEval sentiment results
+#  - deberta-v3-base: strongest general-domain base encoder on GLUE-style tasks
+#  - twitter-roberta-base-sentiment-latest: already fine-tuned on TweetEval
+#    *train* by Cardiff NLP; continued fine-tuning at a low LR (no test leakage:
+#    TweetEval test labels were not used to train it)
+defaults:
+  learning_rate: 2.0e-5
+  num_train_epochs: 4
+  per_device_train_batch_size: 32
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  max_length: 128
+  seed: 42
+  fp16: true
+  early_stopping_patience: 2   # evaluations (2 per epoch) => stop after 1 epoch w/o gain
+  evals_per_epoch: 2
+  stage: screen
+
+experiments:
+  - name: s0_distilroberta_original_recipe
+    model_name: distilbert/distilroberta-base
+    num_train_epochs: 2
+    per_device_train_batch_size: 16
+    warmup_ratio: 0.0
+    normalize_text: false
+    early_stopping_patience: 100
+    evals_per_epoch: 1
+    stage: reproduce
+    hypothesis: Re-running the original notebook recipe in this pipeline reproduces ~70% test / ~72% val, validating the pipeline.
+
+  - name: s1_distilroberta
+    model_name: distilbert/distilroberta-base
+    hypothesis: Longer training with warmup + early stopping alone gives a small gain over the original recipe.
+
+  - name: s1_roberta_base
+    model_name: FacebookAI/roberta-base
+    hypothesis: A 12-layer encoder captures context (negation, contrast) better than the 6-layer distilled model.
+
+  - name: s1_twitter_roberta_2022
+    model_name: cardiffnlp/twitter-roberta-base-2022-154m
+    hypothesis: In-domain (Twitter) continued pre-training improves handling of slang, hashtags and emoji.
+
+  - name: s1_bertweet_base
+    model_name: vinai/bertweet-base
+    hypothesis: Pre-training from scratch on tweets yields the best base-size representation for TweetEval.
+
+  - name: s1_deberta_v3_base
+    model_name: microsoft/deberta-v3-base
+    fp16: true
+    hypothesis: DeBERTa-v3's disentangled attention outperforms RoBERTa despite general-domain pre-training.
+
+  - name: s1_twitter_roberta_sentiment_latest
+    model_name: cardiffnlp/twitter-roberta-base-sentiment-latest
+    learning_rate: 1.0e-5
+    num_train_epochs: 2
+    hypothesis: Starting from a checkpoint already tuned for tweet sentiment converges to a better optimum.

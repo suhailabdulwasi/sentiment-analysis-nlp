@@ -1,144 +1,180 @@
+"""Streamlit app: tweet / election-statement sentiment with calibrated transparency.
+
+Run: streamlit run app.py
+Environment:
+    SENTIMENT_MODEL_ID  Hugging Face id or local path (default: production model)
+    SENTIMENT_FAKE_MODEL=1  deterministic keyword backend for tests/offline demos
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import streamlit as st
-from transformers import pipeline
 
-MODEL_ID = "suhailabdulwasi/ai4all-distilroberta-sentiment"
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "src"))
 
-st.set_page_config(
-    page_title="Election Sentiment Analyzer",
-    page_icon="🗳️",
-    layout="centered",
+from sentiment.inference import (  # noqa: E402
+    DEFAULT_MODEL_ID,
+    MAX_BATCH_ROWS,
+    SentimentClassifier,
+    validate_text,
 )
+from sentiment.labels import LABELS  # noqa: E402
 
-@st.cache_resource
-def load_model():
-    return pipeline(
-        "text-classification",
-        model=MODEL_ID,
-        tokenizer=MODEL_ID,
-        device=-1,
-    )
+MODEL_ID = os.environ.get("SENTIMENT_MODEL_ID", DEFAULT_MODEL_ID)
+METRICS_PATH = ROOT / "reports" / "model_card_metrics.json"
+LABEL_STYLE = {"negative": ("🔴", "error"), "neutral": ("⚪", "info"), "positive": ("🟢", "success")}
 
-def predict_sentiments(texts):
-    results = model(
-        texts,
-        truncation=True,
-        max_length=512,
-        batch_size=16,
-    )
-    return [result["label"].lower() for result in results]
+st.set_page_config(page_title="Election Sentiment Analyzer", page_icon="🗳️", layout="centered")
 
-st.title("Election Sentiment Analyzer")
 
-st.write(
-    "Analyze text using a fine-tuned DistilRoBERTa "
-    "sentiment classification model."
-)
+def _fake_proba(texts: list[str]) -> np.ndarray:
+    """Offline keyword backend (tests / demos only — not a real model)."""
+    out = []
+    for t in texts:
+        t = t.lower()
+        pos = sum(w in t for w in ("love", "great", "amazing", "win", "good"))
+        neg = sum(w in t for w in ("hate", "terrible", "awful", "disaster", "bad"))
+        logits = np.array([neg, 0.5, pos], dtype=float)
+        e = np.exp(logits - logits.max())
+        out.append(e / e.sum())
+    return np.array(out)
 
+
+@st.cache_resource(show_spinner="Loading model…")
+def load_classifier(model_id: str) -> SentimentClassifier:
+    if os.environ.get("SENTIMENT_FAKE_MODEL") == "1":
+        return SentimentClassifier(model_id="fake-keyword-model", predict_proba_fn=_fake_proba)
+    return SentimentClassifier(model_id)
+
+
+@st.cache_data
+def load_model_card() -> dict:
+    try:
+        return json.loads(METRICS_PATH.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+card = load_model_card()
+LOW_CONF = float(card.get("low_confidence_threshold", 0.6))
+
+st.title("🗳️ Election Sentiment Analyzer")
+st.write("Classifies the **overall sentiment** of a tweet or short statement as negative, neutral or positive.")
 st.caption(
-    "This model predicts positive, negative, or neutral sentiment. "
-    "It does not determine political affiliation, factual accuracy, "
-    "or candidate support."
+    "Sentiment ≠ stance: a negative tweet may still support a candidate (e.g. attacking an opponent). "
+    "The model does not judge political affiliation, factual accuracy or candidate support."
 )
 
 try:
-    model = load_model()
-except Exception as error:
-    st.error(f"Unable to load the model: {error}")
+    clf = load_classifier(MODEL_ID)
+except Exception as err:  # network, missing weights, bad id
+    st.error(f"Could not load model `{MODEL_ID}`: {type(err).__name__}: {err}")
+    st.info("Check your internet connection or set SENTIMENT_MODEL_ID to a local checkpoint directory.")
     st.stop()
 
-tab1, tab2, tab3 = st.tabs(
-    ["Analyze Text", "Batch Analysis", "Model Information"]
-)
+tab_single, tab_batch, tab_info = st.tabs(["Analyze text", "Batch CSV", "Model information"])
 
-with tab1:
-    st.subheader("Analyze a statement")
-
-    user_text = st.text_area(
-        "Enter a tweet or political statement:",
-        placeholder="I really liked the candidate's speech!",
-        height=130,
+with tab_single:
+    text = st.text_area(
+        "Tweet or statement", placeholder="I really liked the candidate's speech!", height=120, max_chars=2000
     )
-
-    if st.button("Analyze Sentiment", type="primary"):
-        if not user_text.strip():
-            st.warning("Please enter some text.")
+    if st.button("Analyze sentiment", type="primary"):
+        err = validate_text(text)
+        if err:
+            st.warning(f"Please enter some text ({err}).")
         else:
-            prediction = predict_sentiments([user_text])[0]
-
-            st.subheader("Prediction")
-
-            if prediction == "positive":
-                st.success("Positive sentiment")
-            elif prediction == "negative":
-                st.error("Negative sentiment")
-            else:
-                st.info("Neutral sentiment")
-
+            pred = clf.predict([text])[0]
+            icon, kind = LABEL_STYLE[pred.label]
+            getattr(st, kind)(f"{icon} **{pred.label.capitalize()}** — model probability {pred.confidence:.0%}")
+            st.bar_chart(
+                pd.DataFrame({"probability": [pred.probabilities[k] for k in LABELS]},
+                             index=[k.capitalize() for k in LABELS]),
+                horizontal=True,
+            )
+            if pred.confidence < LOW_CONF:
+                st.warning(
+                    f"Low confidence (< {LOW_CONF:.0%}). The text may be ambiguous, mixed, sarcastic or "
+                    "unlike the training data — treat this prediction with caution."
+                )
             st.caption(
-                "Predictions may be incorrect, particularly "
-                "for sarcasm or ambiguous language."
+                "Probabilities are the model's softmax outputs, not guarantees. Transformer classifiers are "
+                "often over-confident; see the calibration notes under *Model information*."
             )
 
-with tab2:
-    st.subheader("Analyze multiple statements")
-
-    uploaded_file = st.file_uploader(
-        "Upload a CSV containing a tweet_text column",
-        type=["csv"],
-    )
-
-    if uploaded_file is not None:
+with tab_batch:
+    st.write(f"Upload a CSV (max {MAX_BATCH_ROWS:,} rows). Choose the column that contains the text.")
+    upload = st.file_uploader("CSV file", type=["csv"])
+    if upload is not None:
         try:
-            df = pd.read_csv(uploaded_file)
+            df = pd.read_csv(upload)
+        except Exception as err:
+            st.error(f"Could not read CSV: {err}")
+            st.stop()
+        if df.empty:
+            st.warning("The CSV has no rows.")
+        else:
+            text_cols = list(df.columns)
+            default = text_cols.index("tweet_text") if "tweet_text" in text_cols else 0
+            col = st.selectbox("Text column", text_cols, index=default)
+            if len(df) > MAX_BATCH_ROWS:
+                st.warning(f"Only the first {MAX_BATCH_ROWS:,} of {len(df):,} rows will be analysed.")
+                df = df.head(MAX_BATCH_ROWS)
+            if st.button("Run batch analysis", type="primary"):
+                texts = df[col].tolist()
+                preds, bar = [], st.progress(0.0, text="Classifying…")
+                step = 64
+                for i in range(0, len(texts), step):
+                    preds.extend(clf.predict(texts[i : i + step]))
+                    bar.progress(min(1.0, (i + step) / len(texts)), text=f"{min(i + step, len(texts))}/{len(texts)}")
+                bar.empty()
+                result = pd.concat([df.reset_index(drop=True), pd.DataFrame([p.as_row() for p in preds])], axis=1)
+                n_err = int(result["error"].notna().sum())
+                ok = result[result["error"].isna()]
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Rows analysed", len(ok))
+                c2.metric("Skipped (invalid)", n_err)
+                c3.metric("Low confidence", int((ok["confidence"] < LOW_CONF).sum()))
+                if len(ok):
+                    st.bar_chart(ok["predicted_sentiment"].value_counts().reindex(list(LABELS), fill_value=0))
+                st.dataframe(result, use_container_width=True)
+                st.download_button(
+                    "Download predictions (CSV)", result.to_csv(index=False), "sentiment_predictions.csv", "text/csv"
+                )
 
-            if "tweet_text" not in df.columns:
-                st.error("Your CSV must contain a tweet_text column.")
-            else:
-                if st.button("Run Batch Analysis"):
-                    texts = df["tweet_text"].fillna("").astype(str).tolist()
-
-                    if not texts:
-                        st.warning("The CSV contains no rows.")
-                    else:
-                        df["predicted_sentiment"] = predict_sentiments(texts)
-
-                        st.dataframe(df, use_container_width=True)
-
-                        st.download_button(
-                            "Download Predictions",
-                            data=df.to_csv(index=False),
-                            file_name="sentiment_predictions.csv",
-                            mime="text/csv",
-                        )
-        except Exception as error:
-            st.error(f"Could not process CSV: {error}")
-
-with tab3:
-    st.subheader("Model Information")
-
-    st.write("**Architecture:** DistilRoBERTa")
-    st.write("**Training dataset:** TweetEval sentiment")
-    st.write("**Classification:** Positive, negative, neutral")
-    st.write("**Training:** Fine-tuned for 2 epochs")
-
-    st.metric("Held-out test accuracy", "70.41%")
-    st.metric("Held-out test macro F1", "70.44%")
-    st.write("**Test samples:** 12,284")
-
-    st.info(
-        "These metrics come from the TweetEval sentiment test set. "
-        "Performance on election-specific statements has not "
-        "been independently evaluated."
-    )
-
+with tab_info:
+    st.subheader("Model")
+    st.write(f"**Model:** `{MODEL_ID}`")
+    if card and card.get("model_id") == MODEL_ID:
+        st.write(f"**Architecture:** {card['architecture']}")
+        st.write(f"**Training data:** {card['training_data']}")
+        st.write(f"**Recipe:** {card['training_recipe']}")
+        for ev in card.get("evaluations", []):
+            st.markdown(f"**{ev['dataset']}**")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Accuracy", f"{ev['accuracy']:.2%}")
+            c2.metric("Macro F1", f"{ev['macro_f1']:.2%}")
+            c3.metric("Macro recall", f"{ev['macro_recall']:.2%}")
+            st.caption(f"{ev['note']} Source: {ev['source']}.")
+        st.info(f"Election-domain evaluation: {card.get('election_domain_status', 'not available')}")
+    else:
+        st.warning("No verified evaluation metrics are recorded for this model id.")
+    st.subheader("Limitations")
     st.markdown(
-        "[View model on Hugging Face]"
-        "(https://huggingface.co/suhailabdulwasi/"
-        "ai4all-distilroberta-sentiment)"
+        "- Trained on general tweets (TweetEval, ~2013–2017); election language, new slang and events may differ.\n"
+        "- Neutral vs. negative is the most frequent confusion, especially for factual news about negative events.\n"
+        "- Sarcasm, irony and mixed sentiment are frequently misclassified.\n"
+        "- Human annotators themselves disagree on many tweets, so 100% accuracy is not attainable on these labels.\n"
+        "- English only. Do not use for decisions about individuals."
     )
-
-    st.write(
-        "An independent extension of a collaborative "
-        "AI4ALL Ignite sentiment analysis project."
+    st.caption(
+        "Independent extension of a collaborative AI4ALL Ignite sentiment-analysis project "
+        "([source](https://github.com/suhailabdulwasi/sentiment-analysis-nlp))."
     )

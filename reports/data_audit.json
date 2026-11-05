@@ -1,0 +1,305 @@
+{
+  "tweeteval": {
+    "sizes_match_expected": {
+      "train": true,
+      "validation": true,
+      "test": true
+    },
+    "label_distribution": {
+      "train": {
+        "negative": {
+          "n": 7093,
+          "pct": 15.55
+        },
+        "neutral": {
+          "n": 20673,
+          "pct": 45.32
+        },
+        "positive": {
+          "n": 17849,
+          "pct": 39.13
+        }
+      },
+      "validation": {
+        "negative": {
+          "n": 312,
+          "pct": 15.6
+        },
+        "neutral": {
+          "n": 869,
+          "pct": 43.45
+        },
+        "positive": {
+          "n": 819,
+          "pct": 40.95
+        }
+      },
+      "test": {
+        "negative": {
+          "n": 3972,
+          "pct": 32.33
+        },
+        "neutral": {
+          "n": 5937,
+          "pct": 48.33
+        },
+        "positive": {
+          "n": 2375,
+          "pct": 19.33
+        }
+      }
+    },
+    "within_split_exact": {
+      "train": {
+        "rows": 45615,
+        "rows_in_duplicate_groups": 54,
+        "redundant_rows": 29,
+        "duplicate_groups": 25,
+        "conflicting_label_groups": 3
+      },
+      "validation": {
+        "rows": 2000,
+        "rows_in_duplicate_groups": 0,
+        "redundant_rows": 0,
+        "duplicate_groups": 0,
+        "conflicting_label_groups": 0
+      },
+      "test": {
+        "rows": 12284,
+        "rows_in_duplicate_groups": 0,
+        "redundant_rows": 0,
+        "duplicate_groups": 0,
+        "conflicting_label_groups": 0
+      }
+    },
+    "within_split_normalized": {
+      "train": {
+        "rows": 45615,
+        "rows_in_duplicate_groups": 220,
+        "redundant_rows": 115,
+        "duplicate_groups": 105,
+        "conflicting_label_groups": 23
+      },
+      "validation": {
+        "rows": 2000,
+        "rows_in_duplicate_groups": 0,
+        "redundant_rows": 0,
+        "duplicate_groups": 0,
+        "conflicting_label_groups": 0
+      },
+      "test": {
+        "rows": 12284,
+        "rows_in_duplicate_groups": 20,
+        "redundant_rows": 13,
+        "duplicate_groups": 7,
+        "conflicting_label_groups": 3
+      }
+    },
+    "cross_split_exact": {
+      "train->validation": {
+        "overlapping_rows_in_validation": 0,
+        "fraction_of_validation": 0.0,
+        "same_label": 0
+      },
+      "train->test": {
+        "overlapping_rows_in_test": 0,
+        "fraction_of_test": 0.0,
+        "same_label": 0
+      },
+      "validation->test": {
+        "overlapping_rows_in_test": 0,
+        "fraction_of_test": 0.0,
+        "same_label": 0
+      }
+    },
+    "cross_split_normalized": {
+      "train->validation": {
+        "overlapping_rows_in_validation": 10,
+        "fraction_of_validation": 0.005,
+        "same_label": 9
+      },
+      "train->test": {
+        "overlapping_rows_in_test": 0,
+        "fraction_of_test": 0.0,
+        "same_label": 0
+      },
+      "validation->test": {
+        "overlapping_rows_in_test": 0,
+        "fraction_of_test": 0.0,
+        "same_label": 0
+      }
+    },
+    "whitespace_tokens": {
+      "train": {
+        "mean": 19.2,
+        "p99": 29,
+        "max": 35
+      },
+      "validation": {
+        "mean": 19.4,
+        "p99": 29,
+        "max": 31
+      },
+      "test": {
+        "mean": 14.9,
+        "p99": 27,
+        "max": 32
+      }
+    },
+    "raw_handles_remaining": {
+      "train": 359,
+      "validation": 18,
+      "test": 272
+    },
+    "distribution_shift": {
+      "train_vs_validation": {
+        "label_chi2": 3.1,
+        "label_p": 0.2117846992672419,
+        "label_cramers_v": 0.0057,
+        "len_words_mean": [
+          19.24,
+          19.44
+        ],
+        "len_mannwhitney_p": 0.045268233654101625
+      },
+      "train_vs_test": {
+        "label_chi2": 2531.5,
+        "label_p": 0.0,
+        "label_cramers_v": 0.1479,
+        "len_words_mean": [
+          19.24,
+          14.86
+        ],
+        "len_mannwhitney_p": 0.0
+      },
+      "validation_vs_test": {
+        "label_chi2": 528.6,
+        "label_p": 1.6373577979032583e-115,
+        "label_cramers_v": 0.136,
+        "len_words_mean": [
+          19.44,
+          14.86
+        ],
+        "len_mannwhitney_p": 3.0647651657749457e-232
+      },
+      "surface_feature_pct": {
+        "train": {
+          "has_url": 0.19,
+          "has_user_mention": 28.84,
+          "has_hashtag": 18.69,
+          "starts_with_quote": 20.54
+        },
+        "validation": {
+          "has_url": 0.15,
+          "has_user_mention": 30.5,
+          "has_hashtag": 17.6,
+          "starts_with_quote": 19.85
+        },
+        "test": {
+          "has_url": 3.07,
+          "has_user_mention": 39.47,
+          "has_hashtag": 39.28,
+          "starts_with_quote": 1.12
+        }
+      },
+      "majority_class_accuracy": {
+        "train": 0.4532,
+        "validation": 0.4345,
+        "test": 0.4833
+      }
+    }
+  },
+  "gop_debate": {
+    "sha256": "83beb7691f876f9a762613e7c262f7a777a529cccfb96478089e912f1292c61c",
+    "sha256_matches_pinned": true,
+    "raw_rows": 13871,
+    "raw_sentiment_values": {
+      "Negative": 8493,
+      "Neutral": 3142,
+      "Positive": 2236
+    },
+    "relevant_yn_values": {
+      "yes": 13871
+    },
+    "sentiment_confidence_quantiles": {
+      "0.1": 0.3617,
+      "0.25": 0.6517,
+      "0.5": 0.6813,
+      "0.75": 1.0,
+      "0.9": 1.0
+    },
+    "retweets_rows": 7686,
+    "gold_rows": 15,
+    "dedup_rows": 9222,
+    "dedup_label_distribution": {
+      "negative": {
+        "n": 5451,
+        "pct": 59.11
+      },
+      "neutral": {
+        "n": 2264,
+        "pct": 24.55
+      },
+      "positive": {
+        "n": 1507,
+        "pct": 16.34
+      }
+    },
+    "high_agreement_threshold": 1.0,
+    "confidence_values_between_0.71_and_0.999": 56,
+    "dedup_conf_ge_0.6": {
+      "rows": 8115,
+      "dist": {
+        "negative": {
+          "n": 5057,
+          "pct": 62.32
+        },
+        "neutral": {
+          "n": 1854,
+          "pct": 22.85
+        },
+        "positive": {
+          "n": 1204,
+          "pct": 14.84
+        }
+      }
+    },
+    "dedup_conf_ge_0.8": {
+      "rows": 3589,
+      "dist": {
+        "negative": {
+          "n": 2550,
+          "pct": 71.05
+        },
+        "neutral": {
+          "n": 513,
+          "pct": 14.29
+        },
+        "positive": {
+          "n": 526,
+          "pct": 14.66
+        }
+      }
+    },
+    "dedup_conf_ge_1.0": {
+      "rows": 3589,
+      "dist": {
+        "negative": {
+          "n": 2550,
+          "pct": 71.05
+        },
+        "neutral": {
+          "n": 513,
+          "pct": 14.29
+        },
+        "positive": {
+          "n": 526,
+          "pct": 14.66
+        }
+      }
+    },
+    "overlap_with_tweeteval_train": 1,
+    "overlap_with_tweeteval_validation": 0,
+    "overlap_with_tweeteval_test": 0
+  }
+}
