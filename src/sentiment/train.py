@@ -60,6 +60,22 @@ def _load_tokenizer(model_name: str):
     return AutoTokenizer.from_pretrained(model_name)
 
 
+def load_model_for_training(model_name: str, model_cfg):
+    """Load a classification model with **fp32 master weights**.
+
+    transformers>=5 loads weights in the dtype they were saved in. Checkpoints
+    stored in fp16 (e.g. microsoft/deberta-v3-base) then make AMP's GradScaler
+    fail with "Attempting to unscale FP16 gradients". Mixed precision must keep
+    fp32 parameters and only autocast activations, so the dtype is forced here.
+    """
+    import torch
+    from transformers import AutoModelForSequenceClassification
+
+    return AutoModelForSequenceClassification.from_pretrained(
+        model_name, config=model_cfg, ignore_mismatched_sizes=True, dtype=torch.float32
+    )
+
+
 def run_experiment(
     cfg: ExperimentConfig,
     data_root: str | Path,
@@ -71,7 +87,6 @@ def run_experiment(
     from datasets import Dataset
     from transformers import (
         AutoConfig,
-        AutoModelForSequenceClassification,
         DataCollatorWithPadding,
         EarlyStoppingCallback,
         Trainer,
@@ -103,9 +118,7 @@ def run_experiment(
         for attr in ("hidden_dropout_prob", "attention_probs_dropout_prob", "dropout"):
             if hasattr(model_cfg, attr):
                 setattr(model_cfg, attr, cfg.dropout)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        cfg.model_name, config=model_cfg, ignore_mismatched_sizes=True
-    )
+    model = load_model_for_training(cfg.model_name, model_cfg)
 
     def tok(batch):
         return tokenizer(batch["text"], truncation=True, max_length=cfg.max_length)

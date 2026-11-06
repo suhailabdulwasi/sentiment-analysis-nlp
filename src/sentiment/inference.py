@@ -96,7 +96,9 @@ class SentimentClassifier:
         self._torch = torch
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_id).to(self.device)
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            model_id, dtype=torch.float32
+        ).to(self.device)
         self.model.eval()
         id2label = {int(k): v for k, v in self.model.config.id2label.items()}
         # Decode via the checkpoint's own mapping: never assume an order.

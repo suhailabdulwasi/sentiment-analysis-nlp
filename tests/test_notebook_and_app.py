@@ -88,3 +88,22 @@ print("E2E_OK", sel["members"])
     env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
     r = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, env=env, timeout=900)
     assert "E2E_OK" in r.stdout, r.stderr[-3000:]
+
+
+def test_fp16_checkpoint_loads_with_fp32_master_weights(tmp_path):
+    """Regression: DeBERTa-v3 failed with 'Attempting to unscale FP16 gradients'
+    because transformers>=5 kept the checkpoint's fp16 dtype."""
+    import torch
+    from transformers import AutoConfig, RobertaForMaskedLM
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from make_tiny_model import build
+
+    from sentiment.labels import ID2LABEL, LABEL2ID
+    from sentiment.train import load_model_for_training
+
+    path = build(tmp_path / "tiny", ["a b c d"] * 20)
+    RobertaForMaskedLM.from_pretrained(path).half().save_pretrained(path)
+    cfg = AutoConfig.from_pretrained(path, num_labels=3, id2label=ID2LABEL, label2id=LABEL2ID)
+    model = load_model_for_training(str(path), cfg)
+    assert {p.dtype for p in model.parameters()} == {torch.float32}
