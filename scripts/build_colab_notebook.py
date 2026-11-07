@@ -67,11 +67,11 @@ What it does, in order:
 Integrity rules enforced in code: test labels are never loaded during training/selection; early stopping and selection use validation only; the GOP data is never used for training or tuning.
 Your existing notebook, Hugging Face model and GitHub `main` are **not** modified.
 
-Expected runtime on a T4: ~3.5–5 h with all stages (≈1.5 h if `RUN_LARGE=False` and `RUN_SEEDS=False`). Peak Drive usage ≈ 4–6 GB (checkpoints are pruned after each stage).
+Expected GPU time for the remaining work: ~40 min with the defaults (`RUN_LARGE=False`); add ~70 min with `RUN_LARGE=True`. Peak Drive usage ≈ 4–6 GB (checkpoints are pruned after each stage).
 """),
         code("""
 # ---- Settings -------------------------------------------------------------
-RUN_LARGE = True            # stage 3: large models (~1.5 h extra)
+RUN_LARGE = False           # stage 3: large models (~70 min extra GPU; off to fit free-tier quota)
 RUN_SEEDS = True            # stage 4: 2 extra seeds of the best config
 KEEP_TOP_CHECKPOINTS = 4    # best checkpoint kept per architecture, top-N architectures
 DRIVE_ROOT = "/content/drive/MyDrive/sentiment-experiments"
