@@ -9,19 +9,25 @@ import pytest
 from .conftest import ROOT
 
 
-def test_notebook_is_current_and_valid():
+@pytest.mark.parametrize("name", ["colab_t4_experiments.ipynb", "kaggle_t4_experiments.ipynb"])
+def test_notebook_is_current_and_valid(name):
     """The committed notebook must embed exactly the current source (rebuild if this fails)."""
     sys.path.insert(0, str(ROOT / "scripts"))
     import build_colab_notebook as b
 
-    nb = json.loads((ROOT / "notebooks" / "colab_t4_experiments.ipynb").read_text())
+    nb = json.loads((ROOT / "notebooks" / name).read_text())
     _, digest = b.bundle()
     src = "".join(c["source"] for c in nb["cells"] if c["cell_type"] == "code")
     assert digest in src, "notebook is stale: run python scripts/build_colab_notebook.py"
     for cell in nb["cells"]:
         if cell["cell_type"] == "code":
             ast.parse(cell["source"])
-    assert nb["metadata"]["colab"]["gpuType"] == "T4"
+    if name.startswith("kaggle"):
+        settings = nb["cells"][1]["source"]
+        assert 'CUDA_VISIBLE_DEVICES"] = "0"' in settings  # single GPU => same batch size as Colab
+        assert "/kaggle/working" in settings and "google.colab" not in src
+    else:
+        assert nb["metadata"]["colab"]["gpuType"] == "T4"
     # the compressed bundle decodes to exactly the current source files
     import base64
     import hashlib

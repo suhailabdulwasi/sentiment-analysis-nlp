@@ -17,12 +17,76 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "notebooks" / "colab_t4_experiments.ipynb"
+OUT_KAGGLE = ROOT / "notebooks" / "kaggle_t4_experiments.ipynb"
+
+COLAB_HOW = """**How to run:** `Runtime → Change runtime type → T4 GPU`, then `Runtime → Run all`.
+Approve the Google Drive prompt. Everything else is automatic. If Colab disconnects,
+just **Run all** again — finished experiments are skipped (results live in Drive)."""
+
+KAGGLE_HOW = """**How to run (Kaggle):** in the right-hand panel set **Accelerator → GPU T4 x2** and
+**Internet → On** (needs a phone-verified account), then click **Save Version → Save & Run All
+(Commit) → Save**. It runs in the background — you can close the laptop. When the version
+finishes, open it → **Output** → download `results_bundle.zip`. Only one GPU is used
+(`CUDA_VISIBLE_DEVICES=0`) so batch sizes match the Colab runs exactly."""
+
+COLAB_STORAGE = """
+from google.colab import drive
+drive.mount("/content/drive")
+import os, json, hashlib, pathlib
+for sub in ("runs", "reports", "data"):
+    os.makedirs(f"{DRIVE_ROOT}/{sub}", exist_ok=True)
+RUN_ROOT, REPORT_DIR, DATA_DIR = f"{DRIVE_ROOT}/runs", f"{DRIVE_ROOT}/reports", f"{DRIVE_ROOT}/data"
+PKG_DIR = "/content/sentiment_pkg"
+# Trainer checkpoints stay on local disk (see sentiment.train); remove stale ones from Drive.
+os.environ["SENTIMENT_CKPT_DIR"] = "/content/ckpt"
+import glob, shutil
+stale = glob.glob(f"{RUN_ROOT}/*/checkpoints") + glob.glob(f"{RUN_ROOT}/_local_ckpt")
+for d in stale:
+    shutil.rmtree(d, ignore_errors=True)
+print(f"Removed {len(stale)} stale checkpoint folder(s) from Drive. Empty Drive's trash to reclaim the space.")
+"""
+
+KAGGLE_STORAGE = """
+import os, json, hashlib, pathlib, glob, shutil
+for sub in ("runs", "reports", "data"):
+    os.makedirs(f"{DRIVE_ROOT}/{sub}", exist_ok=True)
+RUN_ROOT, REPORT_DIR, DATA_DIR = f"{DRIVE_ROOT}/runs", f"{DRIVE_ROOT}/reports", f"{DRIVE_ROOT}/data"
+PKG_DIR = "/tmp/sentiment_pkg"
+os.environ["SENTIMENT_CKPT_DIR"] = "/tmp/ckpt"   # not part of the saved Kaggle output
+print("Results will be saved under", DRIVE_ROOT)
+"""
 BUNDLE_GLOBS = ["src/sentiment/*.py", "configs/*.yaml", "scripts/audit_data.py", "scripts/train_baseline.py"]
 
 PINNED = (
     "transformers==5.22.1 datasets==5.1.0 accelerate==1.15.0 sentencepiece protobuf "
     "emoji==2.14.1 tabulate pyyaml scikit-learn scipy matplotlib"
 )
+
+
+COLAB_SETTINGS = """
+# ---- Settings -------------------------------------------------------------
+RUN_LARGE = False           # stage 3: large models (~70 min extra GPU; off to fit free-tier quota)
+RUN_SEEDS = True            # stage 4: 2 extra seeds of the best config
+KEEP_TOP_CHECKPOINTS = 4    # best checkpoint kept per architecture, top-N architectures
+DRIVE_ROOT = "/content/drive/MyDrive/sentiment-experiments"
+CURRENT_MODEL = "suhailabdulwasi/ai4all-distilroberta-sentiment"
+"""
+
+KAGGLE_SETTINGS = """
+# ---- Settings -------------------------------------------------------------
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # use ONE T4 so effective batch sizes match the Colab runs
+RUN_LARGE = True            # stage 3: large models (runs unattended in the background on Kaggle)
+RUN_SEEDS = True            # stage 4: 2 extra seeds of the best config
+KEEP_TOP_CHECKPOINTS = 4    # best checkpoint kept per architecture, top-N architectures
+DRIVE_ROOT = "/kaggle/working/sentiment-experiments"   # saved as the version's output
+CURRENT_MODEL = "suhailabdulwasi/ai4all-distilroberta-sentiment"
+"""
+
+COLAB_TIME = ("Expected GPU time for the remaining work: ~40 min with the defaults (`RUN_LARGE=False`); "
+              "add ~70 min with `RUN_LARGE=True`. Peak Drive usage ≈ 4–6 GB (checkpoints are pruned after each stage).")
+KAGGLE_TIME = ("Expected time from scratch on one T4: ~3.5–4.5 h with large models (~2.5 h with `RUN_LARGE=False`), "
+               "well inside Kaggle's 12 h session limit and 30 h/week GPU quota. Output stays under ~6 GB.")
 
 
 def md(text: str) -> dict:
@@ -43,16 +107,17 @@ def bundle() -> tuple[dict[str, str], str]:
     return files, digest
 
 
-def build() -> Path:
+def build(platform: str = "colab") -> Path:
+    if platform not in ("colab", "kaggle"):
+        raise ValueError(platform)
+    kaggle = platform == "kaggle"
     files, digest = bundle()
     packed = base64.b64encode(lzma.compress(json.dumps(files, sort_keys=True).encode(), preset=9)).decode()
     cells = [
         md(f"""
-# Sentiment model experiments — automated T4 pipeline
+# Sentiment model experiments — automated T4 pipeline ({"Kaggle" if kaggle else "Colab"})
 
-**How to run:** `Runtime → Change runtime type → T4 GPU`, then `Runtime → Run all`.
-Approve the Google Drive prompt. Everything else is automatic. If Colab disconnects,
-just **Run all** again — finished experiments are skipped (results live in Drive).
+{KAGGLE_HOW if kaggle else COLAB_HOW}
 
 What it does, in order:
 1. Installs pinned dependencies and writes the project package (bundle SHA-256 `{digest[:16]}…`).
@@ -67,37 +132,16 @@ What it does, in order:
 Integrity rules enforced in code: test labels are never loaded during training/selection; early stopping and selection use validation only; the GOP data is never used for training or tuning.
 Your existing notebook, Hugging Face model and GitHub `main` are **not** modified.
 
-Expected GPU time for the remaining work: ~40 min with the defaults (`RUN_LARGE=False`); add ~70 min with `RUN_LARGE=True`. Peak Drive usage ≈ 4–6 GB (checkpoints are pruned after each stage).
+{KAGGLE_TIME if kaggle else COLAB_TIME}
 """),
-        code("""
-# ---- Settings -------------------------------------------------------------
-RUN_LARGE = False           # stage 3: large models (~70 min extra GPU; off to fit free-tier quota)
-RUN_SEEDS = True            # stage 4: 2 extra seeds of the best config
-KEEP_TOP_CHECKPOINTS = 4    # best checkpoint kept per architecture, top-N architectures
-DRIVE_ROOT = "/content/drive/MyDrive/sentiment-experiments"
-CURRENT_MODEL = "suhailabdulwasi/ai4all-distilroberta-sentiment"
-"""),
+        code(KAGGLE_SETTINGS if kaggle else COLAB_SETTINGS),
         code("""
 import subprocess, sys, torch
-assert torch.cuda.is_available(), "No GPU: Runtime -> Change runtime type -> T4 GPU, then Run all."
+assert torch.cuda.is_available(), "No GPU: enable a T4 GPU accelerator, then run everything again."
 print("GPU:", torch.cuda.get_device_name(0), "| torch", torch.__version__)
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", *PINNED.split()], check=True)
 """.replace("PINNED", repr(PINNED))),
-        code("""
-from google.colab import drive
-drive.mount("/content/drive")
-import os, json, hashlib, pathlib
-for sub in ("runs", "reports", "data"):
-    os.makedirs(f"{DRIVE_ROOT}/{sub}", exist_ok=True)
-RUN_ROOT, REPORT_DIR, DATA_DIR = f"{DRIVE_ROOT}/runs", f"{DRIVE_ROOT}/reports", f"{DRIVE_ROOT}/data"
-# Trainer checkpoints stay on local disk (see sentiment.train); remove stale ones from Drive.
-os.environ["SENTIMENT_CKPT_DIR"] = "/content/ckpt"
-import glob, shutil
-stale = glob.glob(f"{RUN_ROOT}/*/checkpoints") + glob.glob(f"{RUN_ROOT}/_local_ckpt")
-for d in stale:
-    shutil.rmtree(d, ignore_errors=True)
-print(f"Removed {len(stale)} stale checkpoint folder(s) from Drive. Empty Drive's trash to reclaim the space.")
-"""),
+        code(KAGGLE_STORAGE if kaggle else COLAB_STORAGE),
         code(f"""
 # Project source: xz-compressed JSON of src/, configs/, scripts/ (readable copy lives in the GitHub repo).
 # Generated by scripts/build_colab_notebook.py. The SHA-256 check fails loudly if this cell is altered.
@@ -106,7 +150,7 @@ BUNDLE_B64 = "{packed}"
 BUNDLE_SHA256 = "{digest}"
 BUNDLE = json.loads(lzma.decompress(base64.b64decode(BUNDLE_B64)))
 assert hashlib.sha256(json.dumps(BUNDLE, sort_keys=True).encode()).hexdigest() == BUNDLE_SHA256, "corrupted bundle"
-PKG = pathlib.Path("/content/sentiment_pkg")
+PKG = pathlib.Path(PKG_DIR)
 for rel, text in BUNDLE.items():
     p = PKG / rel
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -223,6 +267,9 @@ for d in pathlib.Path(RUN_ROOT).iterdir():
             shutil.copy(d / f, dst / f)
 print(shutil.make_archive(f"{DRIVE_ROOT}/results_bundle", "zip", REPORT_DIR))
 print("Done. Best checkpoints are in", RUN_ROOT, "(not uploaded anywhere).")
+if os.path.isdir("/kaggle/working"):
+    print(shutil.make_archive("/kaggle/working/results_bundle", "zip", REPORT_DIR),
+          "<- download this from the version's Output tab")
 """),
     ]
     nb = {
@@ -230,16 +277,19 @@ print("Done. Best checkpoints are in", RUN_ROOT, "(not uploaded anywhere).")
         "nbformat_minor": 5,
         "metadata": {
             "accelerator": "GPU",
-            "colab": {"gpuType": "T4", "provenance": []},
+            **({"kaggle": {"accelerator": "nvidiaTeslaT4", "isInternetEnabled": True, "isGpuEnabled": True}}
+               if kaggle else {"colab": {"gpuType": "T4", "provenance": []}}),
             "kernelspec": {"display_name": "Python 3", "name": "python3"},
             "language_info": {"name": "python"},
         },
         "cells": cells,
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(nb, indent=1, ensure_ascii=False))
-    return OUT
+    out = OUT_KAGGLE if kaggle else OUT
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(nb, indent=1, ensure_ascii=False))
+    return out
 
 
 if __name__ == "__main__":
-    print(build())
+    print(build("colab"))
+    print(build("kaggle"))

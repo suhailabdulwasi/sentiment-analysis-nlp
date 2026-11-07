@@ -32,7 +32,7 @@ jobs:
       - name: Notebook is in sync with src/
         run: |
           python scripts/build_colab_notebook.py
-          git diff --exit-code notebooks/colab_t4_experiments.ipynb
+          git diff --exit-code notebooks/
       - name: Download TweetEval (official files) for integration tests
         run: python scripts/audit_data.py --out /tmp/data_audit.json > /dev/null
       - name: Tests (unit + CPU integration)
