@@ -107,3 +107,31 @@ def test_fp16_checkpoint_loads_with_fp32_master_weights(tmp_path):
     cfg = AutoConfig.from_pretrained(path, num_labels=3, id2label=ID2LABEL, label2id=LABEL2ID)
     model = load_model_for_training(str(path), cfg)
     assert {p.dtype for p in model.parameters()} == {torch.float32}
+
+
+@pytest.mark.integration
+def test_checkpoints_never_written_to_results_folder(tmp_path, monkeypatch):
+    """Regression: intermediate checkpoints on the Drive-mounted results folder filled
+    Colab's disk. They must go to SENTIMENT_CKPT_DIR and be deleted after training."""
+    data = ROOT / "data" / "raw" / "tweeteval"
+    if not (data / "train_text.txt").exists():
+        pytest.skip("TweetEval not downloaded")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from make_tiny_model import build
+
+    from sentiment.config import ExperimentConfig
+    from sentiment.train import run_experiment
+
+    tiny = build(tmp_path / "tiny", ["good bad neutral words"] * 20)
+    local = tmp_path / "local_ckpt"
+    monkeypatch.setenv("SENTIMENT_CKPT_DIR", str(local))
+    runs = tmp_path / "runs"
+    (runs / "x" / "checkpoints" / "checkpoint-1").mkdir(parents=True)  # stale leftover
+    cfg = ExperimentConfig(name="x", model_name=str(tiny), num_train_epochs=1, max_train_samples=96,
+                           learning_rate=1e-3)
+    run_experiment(cfg, data, runs)
+    produced = sorted(p.name for p in (runs / "x").iterdir())
+    assert produced == ["best", "result.json", "val_probs.npy"]
+    assert not (local / "x").exists()
+    best_files = {p.name for p in (runs / "x" / "best").iterdir()}
+    assert "optimizer.pt" not in best_files and "model.safetensors" in best_files

@@ -90,6 +90,13 @@ import os, json, hashlib, pathlib
 for sub in ("runs", "reports", "data"):
     os.makedirs(f"{DRIVE_ROOT}/{sub}", exist_ok=True)
 RUN_ROOT, REPORT_DIR, DATA_DIR = f"{DRIVE_ROOT}/runs", f"{DRIVE_ROOT}/reports", f"{DRIVE_ROOT}/data"
+# Trainer checkpoints stay on local disk (see sentiment.train); remove stale ones from Drive.
+os.environ["SENTIMENT_CKPT_DIR"] = "/content/ckpt"
+import glob, shutil
+stale = glob.glob(f"{RUN_ROOT}/*/checkpoints") + glob.glob(f"{RUN_ROOT}/_local_ckpt")
+for d in stale:
+    shutil.rmtree(d, ignore_errors=True)
+print(f"Removed {len(stale)} stale checkpoint folder(s) from Drive. Empty Drive's trash to reclaim the space.")
 """),
         code(f"""
 # Project source: xz-compressed JSON of src/, configs/, scripts/ (readable copy lives in the GitHub repo).
@@ -142,6 +149,7 @@ from sentiment.pipeline import run_stage, prune_checkpoints
 from sentiment.selection import load_results, comparison_table
 run_stage(load_experiments(PKG / "configs/experiments.yaml"), TE_ROOT, RUN_ROOT)
 print("pruned:", prune_checkpoints(RUN_ROOT, keep=KEEP_TOP_CHECKPOINTS))
+shutil.rmtree(os.path.expanduser("~/.cache/huggingface/hub"), ignore_errors=True)  # free local disk
 display(comparison_table(load_results(RUN_ROOT)).drop(columns=["hypothesis"]))
 """),
         code("""
@@ -149,6 +157,7 @@ display(comparison_table(load_results(RUN_ROOT)).drop(columns=["hypothesis"]))
 from sentiment.plan import lr_sweep
 run_stage(lr_sweep(load_results(RUN_ROOT)), TE_ROOT, RUN_ROOT)
 print("pruned:", prune_checkpoints(RUN_ROOT, keep=KEEP_TOP_CHECKPOINTS))
+shutil.rmtree(os.path.expanduser("~/.cache/huggingface/hub"), ignore_errors=True)  # free local disk
 """),
         code("""
 # Stage 3: large models
@@ -156,6 +165,7 @@ from sentiment.plan import large_models
 if RUN_LARGE:
     run_stage(large_models(load_results(RUN_ROOT)), TE_ROOT, RUN_ROOT)
     print("pruned:", prune_checkpoints(RUN_ROOT, keep=KEEP_TOP_CHECKPOINTS))
+shutil.rmtree(os.path.expanduser("~/.cache/huggingface/hub"), ignore_errors=True)  # free local disk
 """),
         code("""
 # Stage 4: seed repeats of the best configuration
@@ -163,6 +173,7 @@ from sentiment.plan import seed_repeats
 if RUN_SEEDS:
     run_stage(seed_repeats(load_results(RUN_ROOT)), TE_ROOT, RUN_ROOT)
     print("pruned:", prune_checkpoints(RUN_ROOT, keep=KEEP_TOP_CHECKPOINTS))
+shutil.rmtree(os.path.expanduser("~/.cache/huggingface/hub"), ignore_errors=True)  # free local disk
 """),
         md("""
 ## Freeze model selection (validation only)

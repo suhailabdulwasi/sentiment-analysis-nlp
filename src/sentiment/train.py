@@ -15,6 +15,7 @@ from __future__ import annotations
 import gc
 import json
 import math
+import os
 import platform
 import shutil
 import time
@@ -100,6 +101,15 @@ def run_experiment(
         print(f"[skip] {cfg.name}: result exists")
         return json.loads(result_path.read_text())
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Intermediate Trainer checkpoints go to fast *local* disk, never to the
+    # (Drive-mounted) results folder: on Colab every byte written to Drive is
+    # also cached locally and deleted files land in Drive's trash, which filled
+    # a 112 GB disk during the large-model stage. Only the final best weights
+    # are copied to ``out_dir``.
+    ckpt_dir = Path(os.environ.get("SENTIMENT_CKPT_DIR", out_dir.parent / "_local_ckpt")) / cfg.name
+    shutil.rmtree(ckpt_dir, ignore_errors=True)
+    stale = out_dir / "checkpoints"  # left by older versions / interrupted runs
+    shutil.rmtree(stale, ignore_errors=True)
     set_seed(cfg.seed)
 
     train_df = load_tweeteval_split(data_root, "train")
@@ -156,7 +166,7 @@ def run_experiment(
 
     use_fp16 = cfg.fp16 and torch.cuda.is_available()
     args = TrainingArguments(
-        output_dir=str(out_dir / "checkpoints"),
+        output_dir=str(ckpt_dir),
         learning_rate=cfg.learning_rate,
         num_train_epochs=cfg.num_train_epochs,
         per_device_train_batch_size=cfg.per_device_train_batch_size,
@@ -170,6 +180,7 @@ def run_experiment(
         save_strategy="steps",
         save_steps=eval_steps,
         save_total_limit=1,
+        save_only_model=True,  # no optimizer state: ~3x smaller checkpoints
         load_best_model_at_end=True,
         metric_for_best_model="macro_f1",
         greater_is_better=True,
@@ -223,7 +234,7 @@ def run_experiment(
     if keep_checkpoint:
         trainer.save_model(str(out_dir / "best"))
         tokenizer.save_pretrained(str(out_dir / "best"))
-    shutil.rmtree(out_dir / "checkpoints", ignore_errors=True)
+    shutil.rmtree(ckpt_dir, ignore_errors=True)
     result_path.write_text(json.dumps(result, indent=2, default=str))
 
     del trainer, model
