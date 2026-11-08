@@ -50,6 +50,14 @@ def test_lr_sweep_uses_distinct_top_architectures():
     assert all(c.stage == "lr_sweep" for c in lr_sweep(RESULTS))
 
 
+def test_large_models_use_same_pretraining_family():
+    """Regression: the Twitter sentiment model was mapped to general-domain roberta-large
+    because "roberta-base" is a substring of its id."""
+    res = [_result("t", "cardiffnlp/twitter-roberta-base-sentiment-latest", 0.75)]
+    assert [c.model_name for c in large_models(res)] == ["cardiffnlp/twitter-roberta-large-2022-154m"]
+    assert large_models([_result("x", "distilbert/distilroberta-base", 0.7)]) == []
+
+
 def test_large_models_mapping():
     large = large_models(RESULTS)
     assert [c.model_name for c in large] == ["vinai/bertweet-large", "cardiffnlp/twitter-roberta-large-2022-154m"]

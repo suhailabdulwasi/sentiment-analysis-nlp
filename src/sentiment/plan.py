@@ -5,11 +5,15 @@ from __future__ import annotations
 from sentiment.config import ExperimentConfig
 
 LARGE_MODELS = {
-    # base-model name fragment -> large counterpart
-    "twitter-roberta-base-2022": "cardiffnlp/twitter-roberta-large-2022-154m",
-    "bertweet-base": "vinai/bertweet-large",
-    "roberta-base": "FacebookAI/roberta-large",
-    "deberta-v3-base": "microsoft/deberta-v3-large",
+    # exact base-model id -> large counterpart from the same pre-training family.
+    # Exact keys (not substrings): "roberta-base" is a substring of
+    # "cardiffnlp/twitter-roberta-base-sentiment-latest", which previously
+    # mapped the Twitter model to general-domain FacebookAI/roberta-large.
+    "cardiffnlp/twitter-roberta-base-sentiment-latest": "cardiffnlp/twitter-roberta-large-2022-154m",
+    "cardiffnlp/twitter-roberta-base-2022-154m": "cardiffnlp/twitter-roberta-large-2022-154m",
+    "vinai/bertweet-base": "vinai/bertweet-large",
+    "FacebookAI/roberta-base": "FacebookAI/roberta-large",
+    "microsoft/deberta-v3-base": "microsoft/deberta-v3-large",
 }
 
 
@@ -55,7 +59,7 @@ def large_models(results: list[dict], top_k: int = 2) -> list[ExperimentConfig]:
     out, seen = [], set()
     for r in pool:
         name = r["config"]["model_name"]
-        large = next((v for k, v in LARGE_MODELS.items() if k in name), None)
+        large = LARGE_MODELS.get(name)
         if not large or large in seen:
             continue
         seen.add(large)
