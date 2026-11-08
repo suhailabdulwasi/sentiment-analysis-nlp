@@ -59,7 +59,7 @@ def test_streamlit_app_with_fake_backend():
         at.text_area[0].input("   ").run()
         at.button[0].click().run()
         assert any("Please enter some text" in w.value for w in at.warning)
-        assert len(at.tabs) == 3
+        assert len(at.tabs) == 4
     finally:
         os.environ.pop("SENTIMENT_FAKE_MODEL", None)
 

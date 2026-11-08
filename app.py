@@ -20,6 +20,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from sentiment.dashboard import held_out_table, load_experiment_log, load_json  # noqa: E402
 from sentiment.inference import (  # noqa: E402
     DEFAULT_MODEL_ID,
     MAX_BATCH_ROWS,
@@ -30,6 +31,7 @@ from sentiment.labels import LABELS  # noqa: E402
 
 MODEL_ID = os.environ.get("SENTIMENT_MODEL_ID", DEFAULT_MODEL_ID)
 METRICS_PATH = ROOT / "reports" / "model_card_metrics.json"
+EXPERIMENTS_DIR = Path(os.environ.get("SENTIMENT_REPORTS_DIR", ROOT / "reports" / "experiments"))
 LABEL_STYLE = {"negative": ("🔴", "error"), "neutral": ("⚪", "info"), "positive": ("🟢", "success")}
 
 st.set_page_config(page_title="Election Sentiment Analyzer", page_icon="🗳️", layout="centered")
@@ -80,7 +82,9 @@ except Exception as err:  # network, missing weights, bad id
     st.info("Check your internet connection or set SENTIMENT_MODEL_ID to a local checkpoint directory.")
     st.stop()
 
-tab_single, tab_batch, tab_info = st.tabs(["Analyze text", "Batch CSV", "Model information"])
+tab_single, tab_batch, tab_compare, tab_info = st.tabs(
+    ["Analyze text", "Batch CSV", "Model comparison", "Model information"]
+)
 
 with tab_single:
     text = st.text_area(
@@ -148,6 +152,35 @@ with tab_batch:
                 st.download_button(
                     "Download predictions (CSV)", result.to_csv(index=False), "sentiment_predictions.csv", "text/csv"
                 )
+
+with tab_compare:
+    st.subheader("Model comparison")
+    log = load_experiment_log(EXPERIMENTS_DIR)
+    if log is None:
+        st.info("No experiment results found yet. Run the GPU notebook and import its results with "
+                "`python scripts/ingest_results.py results_bundle.zip`.")
+    else:
+        st.caption(
+            "Validation set (TweetEval, n = 2,000) — used for model selection only. "
+            "Differences below ~1–2 points are within noise (95% CI half-width ≈ 2 points)."
+        )
+        best = log.groupby("model", as_index=False)["val_macro_f1"].max().sort_values("val_macro_f1")
+        st.bar_chart(best.set_index("model")["val_macro_f1"], horizontal=True)
+        st.dataframe(log, use_container_width=True, hide_index=True)
+        selection = load_json(EXPERIMENTS_DIR, "selection.json")
+        if selection:
+            st.success(f"Selected (frozen before testing): {', '.join(selection['members'])} — "
+                       f"validation macro-F1 {selection['val_macro_f1']:.3f}")
+        final = load_json(EXPERIMENTS_DIR, "final_results.json")
+        if final:
+            st.markdown("**Held-out results (evaluated once, after selection was frozen)**")
+            st.dataframe(held_out_table(final), use_container_width=True, hide_index=True)
+            for fig in ("model_comparison", "confusion_tweeteval_test", "reliability_tweeteval_test"):
+                path = EXPERIMENTS_DIR / "figures" / f"{fig}.png"
+                if path.exists():
+                    st.image(str(path))
+        else:
+            st.warning("Held-out (test / election) results are not available yet.")
 
 with tab_info:
     st.subheader("Model")
