@@ -70,6 +70,7 @@ LOW_CONF = float(card.get("low_confidence_threshold", 0.6))
 
 st.title("🗳️ Election Sentiment Analyzer")
 st.write("Classifies the **overall sentiment** of a tweet or short statement as negative, neutral or positive.")
+st.caption("Live predictions use the published DistilRoBERTa checkpoint. The stronger Cardiff Twitter-RoBERTa model appears in the research results only; its fine-tuned weights are not deployed.")
 st.caption(
     "Sentiment ≠ stance: a negative tweet may still support a candidate (e.g. attacking an opponent). "
     "The model does not judge political affiliation, factual accuracy or candidate support."
@@ -155,6 +156,7 @@ with tab_batch:
 
 with tab_compare:
     st.subheader("Model comparison")
+    st.info("Research results are from a separately evaluated Cardiff Twitter-RoBERTa checkpoint. The live analyzer above uses the published DistilRoBERTa model; do not interpret the research model\u2019s scores as live-app performance.")
     log = load_experiment_log(EXPERIMENTS_DIR)
     if log is None:
         st.info("No experiment results found yet. Run the GPU notebook and import its results with "
