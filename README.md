@@ -4,9 +4,9 @@ Three-class sentiment classification (negative / neutral / positive) of tweets a
 statements, with a reproducible training and evaluation pipeline, a pre-registered election-domain
 benchmark and a Streamlit app that shows class probabilities and uncertainty.
 
-> **Status (2026-11-08).** The Kaggle experiment suite completed its evaluation. The selected fine-tuned Cardiff Twitter-RoBERTa achieved **71.96% accuracy / 72.03% macro-F1** on the TweetEval test set (12,284 tweets), compared with **70.48% / 70.52%** for the original checkpoint in the same evaluation run. The improvement was **+1.51 macro-F1 percentage points** (paired bootstrap 95% CI: +0.81 to +2.21 points). On 9,222 deduplicated GOP debate tweets, the selected model scored **60.91% accuracy / 59.09% macro-F1**. These are research results, **not the performance of the live app**: the fine-tuned Cardiff checkpoint was not preserved in the exported archive. The app uses the separately published DistilRoBERTa checkpoint. The Streamlit deployment has not yet been verified.
+> **Status (2026-11-09).** A newly retrained Cardiff Twitter-RoBERTa checkpoint is published at [Hugging Face](https://huggingface.co/suhailabdulwasi/ai4all-cardiff-sentiment) and configured as the Streamlit app's default model. On the held-out TweetEval test set (12,284 tweets), it achieved **71.87% accuracy / 72.02% macro-F1**, compared with **70.48% / 70.52%** for the earlier original model in a historical evaluation. The earlier Cardiff experiment (71.96% / 72.03%) is a distinct checkpoint and its election-domain scores must not be attributed to this deployment. Live hosting has not yet been independently verified.
 
-[Live Streamlit demo](https://sentiment-analysis-nlp-47ba2rhjyjfrrxbrog3nhc.streamlit.app/) — serves the published DistilRoBERTa model; the stronger Cardiff model is reported as an offline experiment, not deployed.
+[Live Streamlit demo](https://sentiment-analysis-nlp-47ba2rhjyjfrrxbrog3nhc.streamlit.app/) — configured to load the newly published Cardiff checkpoint; verify successful loading on the deployed host.
 
 ## Contents
 [Problem](#problem) · [Data](#data) · [Results](#verified-results) · [Error analysis](#error-analysis) ·
@@ -45,8 +45,10 @@ every model.
 |---|---|---:|---:|---:|---:|---:|
 | TF-IDF + LinearSVC (author's retrain, untuned) | – | – | – | 57.38 | – | – |
 | **TF-IDF word+char + LinearSVC (B1, this repo)** | validation, 32 configs | 70.45 | 67.97 | **63.16** [62.25, 64.03] | **62.62** [61.68, 63.54] | 63.28 |
-| **DistilRoBERTa, deployed model** | validation | 72.60\* | 70.85\* | **70.41** | **70.44** | 72.22 |
-| Selected Cardiff Twitter-RoBERTa (research only; weights not preserved) | validation (2,000 tweets) | 77.05 | 75.71 | **71.96** | **72.03** | 73.64 |
+| **DistilRoBERTa, previous deployed model** | validation | 72.60\* | 70.85\* | **70.41** | **70.44** | 72.22 |
+| Earlier Cardiff Twitter-RoBERTa (historical research checkpoint) | validation (2,000 tweets) | 77.05 | 75.71 | **71.96** | **72.03** | 73.64 |
+
+| **New Cardiff Twitter-RoBERTa (published checkpoint)** | validation (2,000 tweets) | 77.20 | 76.00 | **71.87** | **72.02** | Not recorded |
 
 Brackets are 95% bootstrap CIs. \*Measured on a random half of validation (1,000 tweets).
 Deployed-model test metrics are re-derived from the recorded confusion matrix in `tests/test_metrics.py`.
@@ -136,7 +138,7 @@ streamlit run app.py
 * **Model information**: metrics loaded from `reports/model_card_metrics.json`, plus limitations.
 
 `SENTIMENT_MODEL_ID` selects another checkpoint. `SENTIMENT_FAKE_MODEL=1` runs an offline keyword stub
-for UI tests. The app serves the original published DistilRoBERTa checkpoint. The selected Cardiff model's fine-tuned weights were not retained; its experimental results are presented separately and must not be described as live-model performance.
+for UI tests. The app defaults to the newly published fine-tuned Cardiff checkpoint. The historical Cardiff research results and election-domain benchmark were produced with a different checkpoint and must not be described as this live model's performance.
 
 ## Limitations
 * Trained on 2013–2017 general tweets; election language, new slang and events differ (see the GOP results).
