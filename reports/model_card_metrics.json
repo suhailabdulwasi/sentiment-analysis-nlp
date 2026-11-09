@@ -1,0 +1,18 @@
+{
+  "model_id": "suhailabdulwasi/ai4all-distilroberta-sentiment",
+  "architecture": "DistilRoBERTa (distilbert/distilroberta-base), 82M parameters",
+  "training_data": "TweetEval sentiment train split (45,615 tweets)",
+  "training_recipe": "2 epochs, lr 2e-5, batch 16, max length 128, fp16, best epoch by validation macro-F1",
+  "evaluations": [
+    {
+      "dataset": "TweetEval sentiment test (12,284 tweets)",
+      "accuracy": 0.7041,
+      "macro_f1": 0.7044,
+      "macro_recall": 0.7222,
+      "source": "Original Colab notebook (cell 20); recomputed from the confusion matrix",
+      "note": "General-domain tweets (SemEval-2017). Not an election-specific evaluation."
+    }
+  ],
+  "election_domain_status": "Pending: GOP-debate benchmark evaluation runs in notebooks/colab_t4_experiments.ipynb",
+  "low_confidence_threshold": 0.6
+}

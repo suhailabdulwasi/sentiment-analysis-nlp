@@ -1,0 +1,15 @@
+# Training, evaluation and tests. Versions used for the verified runs.
+-r requirements.txt
+transformers==5.22.1
+datasets==5.1.0
+accelerate==1.15.0
+scikit-learn==1.9.1
+scipy
+matplotlib
+pyyaml
+sentencepiece
+protobuf
+emoji==2.14.1
+tokenizers
+pytest
+ruff
