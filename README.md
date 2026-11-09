@@ -6,6 +6,8 @@ benchmark and a Streamlit app that shows class probabilities and uncertainty.
 
 > **Status (2026-11-08).** The Kaggle experiment suite completed its evaluation. The selected fine-tuned Cardiff Twitter-RoBERTa achieved **71.96% accuracy / 72.03% macro-F1** on the TweetEval test set (12,284 tweets), compared with **70.48% / 70.52%** for the original checkpoint in the same evaluation run. The improvement was **+1.51 macro-F1 percentage points** (paired bootstrap 95% CI: +0.81 to +2.21 points). On 9,222 deduplicated GOP debate tweets, the selected model scored **60.91% accuracy / 59.09% macro-F1**. These are research results, **not the performance of the live app**: the fine-tuned Cardiff checkpoint was not preserved in the exported archive. The app uses the separately published DistilRoBERTa checkpoint. The Streamlit deployment has not yet been verified.
 
+[Live Streamlit demo](https://sentiment-analysis-nlp-47ba2rhjyjfrrxbrog3nhc.streamlit.app/) — serves the published DistilRoBERTa model; the stronger Cardiff model is reported as an offline experiment, not deployed.
+
 ## Contents
 [Problem](#problem) · [Data](#data) · [Results](#verified-results) · [Error analysis](#error-analysis) ·
 [Method](#training-and-selection-methodology) · [Reproduce](#reproduce) · [App](#streamlit-app) ·
