@@ -14,7 +14,7 @@ import numpy as np
 from sentiment.labels import LABELS, normalize_label
 from sentiment.preprocess import normalize_tweet
 
-DEFAULT_MODEL_ID = "suhailabdulwasi/ai4all-distilroberta-sentiment"
+DEFAULT_MODEL_ID = "suhailabdulwasi/ai4all-cardiff-sentiment"
 MAX_CHARS = 2_000
 MAX_BATCH_ROWS = 5_000
 
