@@ -1,0 +1,9 @@
+{
+  "members": [
+    "s1_twitter_roberta_sentiment_latest"
+  ],
+  "val_macro_f1": 0.7570541000747683,
+  "val_accuracy": 0.7705,
+  "frozen_at": "2026-11-08 08:05:32",
+  "note": "Compact dashboard copy of Kaggle version 2 selection; see original results_bundle.zip for full record."
+}
