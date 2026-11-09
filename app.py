@@ -57,7 +57,6 @@ def load_classifier(model_id: str) -> SentimentClassifier:
     return SentimentClassifier(model_id)
 
 
-@st.cache_data
 def load_model_card() -> dict:
     try:
         return json.loads(METRICS_PATH.read_text())
@@ -200,7 +199,7 @@ with tab_info:
             st.caption(f"{ev['note']} Source: {ev['source']}.")
         st.info(f"Election-domain evaluation: {card.get('election_domain_status', 'not available')}")
     else:
-        st.warning("No verified evaluation metrics are recorded for this model id.")
+        st.warning("No verified evaluation metrics are recorded for this model id. Check the model-card metrics file and deployment version.")
     st.subheader("Limitations")
     st.markdown(
         "- Trained on general tweets (TweetEval, ~2013–2017); election language, new slang and events may differ.\n"
