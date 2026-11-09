@@ -1,18 +1,24 @@
 {
-  "model_id": "suhailabdulwasi/ai4all-distilroberta-sentiment",
-  "architecture": "DistilRoBERTa (distilbert/distilroberta-base), 82M parameters",
+  "model_id": "suhailabdulwasi/ai4all-cardiff-sentiment",
+  "architecture": "Cardiff NLP Twitter-RoBERTa (cardiffnlp/twitter-roberta-base-sentiment-latest), fine-tuned",
   "training_data": "TweetEval sentiment train split (45,615 tweets)",
-  "training_recipe": "2 epochs, lr 2e-5, batch 16, max length 128, fp16, best epoch by validation macro-F1",
+  "training_recipe": "2 epochs, learning rate 1e-5, batch size 32, max length 128, fp16, seed 42; best checkpoint selected by validation macro-F1",
   "evaluations": [
     {
       "dataset": "TweetEval sentiment test (12,284 tweets)",
-      "accuracy": 0.7041,
-      "macro_f1": 0.7044,
-      "macro_recall": 0.7222,
-      "source": "Original Colab notebook (cell 20); recomputed from the confusion matrix",
-      "note": "General-domain tweets (SemEval-2017). Not an election-specific evaluation."
+      "accuracy": 0.7187,
+      "macro_f1": 0.7202,
+      "source": "Kaggle retraining session, 2026-11-09; sentiment.final_eval.predict_probs and classification_metrics",
+      "note": "Held-out TweetEval test evaluation of the newly uploaded checkpoint. Rounded to two decimal percentage points; not an election-domain evaluation."
+    },
+    {
+      "dataset": "TweetEval validation (2,000 tweets)",
+      "accuracy": 0.772,
+      "macro_f1": 0.76,
+      "source": "Kaggle retraining run, 2026-11-09",
+      "note": "Validation used for model selection; not an unbiased test result."
     }
   ],
-  "election_domain_status": "Pending: GOP-debate benchmark evaluation runs in notebooks/colab_t4_experiments.ipynb",
+  "election_domain_status": "Not yet evaluated for this newly retrained checkpoint. Historical GOP benchmark results refer to an earlier experiment.",
   "low_confidence_threshold": 0.6
 }
