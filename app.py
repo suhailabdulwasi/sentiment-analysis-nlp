@@ -70,7 +70,7 @@ LOW_CONF = float(card.get("low_confidence_threshold", 0.6))
 
 st.title("🗳️ Election Sentiment Analyzer")
 st.write("Classifies the **overall sentiment** of a tweet or short statement as negative, neutral or positive.")
-st.caption("Live predictions use the published DistilRoBERTa checkpoint. The stronger Cardiff Twitter-RoBERTa model appears in the research results only; its fine-tuned weights are not deployed.")
+st.caption("Live predictions use the fine-tuned Cardiff Twitter-RoBERTa checkpoint. Its held-out TweetEval test accuracy is 71.87% and macro-F1 is 72.02%.")
 st.caption(
     "Sentiment ≠ stance: a negative tweet may still support a candidate (e.g. attacking an opponent). "
     "The model does not judge political affiliation, factual accuracy or candidate support."
@@ -196,7 +196,7 @@ with tab_info:
             c1, c2, c3 = st.columns(3)
             c1.metric("Accuracy", f"{ev['accuracy']:.2%}")
             c2.metric("Macro F1", f"{ev['macro_f1']:.2%}")
-            c3.metric("Macro recall", f"{ev['macro_recall']:.2%}")
+            c3.metric("Macro recall", f"{ev['macro_recall']:.2%}" if "macro_recall" in ev else "Not recorded")
             st.caption(f"{ev['note']} Source: {ev['source']}.")
         st.info(f"Election-domain evaluation: {card.get('election_domain_status', 'not available')}")
     else:
