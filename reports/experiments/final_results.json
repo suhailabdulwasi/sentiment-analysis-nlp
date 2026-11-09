@@ -1,0 +1,84 @@
+{
+  "selection": {
+    "members": [
+      "s1_twitter_roberta_sentiment_latest"
+    ],
+    "val_macro_f1": 0.7570541000747683,
+    "val_accuracy": 0.7705,
+    "frozen_at": "2026-11-08 08:05:32",
+    "note": "Compact dashboard copy of Kaggle version 2 selection; see original results_bundle.zip for full record."
+  },
+  "source": "Compact dashboard copy of Kaggle version 2 final_results.json; source ZIP retains full confusion matrices and diagnostics.",
+  "tweeteval_test": {
+    "n": 12284,
+    "accuracy": 0.7195538912406382,
+    "macro_f1": 0.720282790390138,
+    "accuracy_ci95": [
+      0.7120624389449691,
+      0.7275317486160859
+    ],
+    "macro_f1_ci95": [
+      0.7124384696467092,
+      0.7282541176857293
+    ],
+    "baseline": {
+      "accuracy": 0.7048192771084337,
+      "macro_f1": 0.705180707989185
+    },
+    "paired_vs_baseline_macro_f1": {
+      "diff": 0.01510208240095301,
+      "ci95": [
+        0.008105582319021193,
+        0.022109147626815973
+      ]
+    }
+  },
+  "gop_full_dedup": {
+    "n": 9222,
+    "accuracy": 0.6090869659509868,
+    "macro_f1": 0.5908946887132872,
+    "accuracy_ci95": [
+      0.599002385599653,
+      0.6191715463023205
+    ],
+    "macro_f1_ci95": [
+      0.5797560253150693,
+      0.6016292309931918
+    ],
+    "baseline": {
+      "accuracy": 0.5961830405551941,
+      "macro_f1": 0.5706514509174362
+    },
+    "paired_vs_baseline_macro_f1": {
+      "diff": 0.02024323779585102,
+      "ci95": [
+        0.012124854799602004,
+        0.02880528460227146
+      ]
+    }
+  },
+  "gop_conf1": {
+    "n": 3589,
+    "accuracy": 0.737809974923377,
+    "macro_f1": 0.6946320582240931,
+    "accuracy_ci95": [
+      0.7227640011145166,
+      0.7525773195876289
+    ],
+    "macro_f1_ci95": [
+      0.678586897159156,
+      0.7108688184922578
+    ],
+    "baseline": {
+      "accuracy": 0.7124547227640011,
+      "macro_f1": 0.6576442289827783
+    },
+    "paired_vs_baseline_macro_f1": {
+      "diff": 0.03698782924131483,
+      "ci95": [
+        0.023472497246259546,
+        0.05120567205879107
+      ]
+    }
+  }
+}
