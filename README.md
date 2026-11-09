@@ -4,11 +4,7 @@ Three-class sentiment classification (negative / neutral / positive) of tweets a
 statements, with a reproducible training and evaluation pipeline, a pre-registered election-domain
 benchmark and a Streamlit app that shows class probabilities and uncertainty.
 
-> **Status (2026-11-05).** The audit, data checks, pipeline, tests and classical baseline are complete
-> and verified. The transformer experiment suite is implemented and tested end to end on CPU with a tiny
-> model, but the **GPU runs have not been executed yet** (they run in
-> [`notebooks/colab_t4_experiments.ipynb`](notebooks/colab_t4_experiments.ipynb) on a Colab T4).
-> Every number below is either a recorded result or marked as pending.
+> **Status (2026-11-08).** The Kaggle experiment suite completed its evaluation. The selected fine-tuned Cardiff Twitter-RoBERTa achieved **71.96% accuracy / 72.03% macro-F1** on the TweetEval test set (12,284 tweets), compared with **70.48% / 70.52%** for the original checkpoint in the same evaluation run. The improvement was **+1.51 macro-F1 percentage points** (paired bootstrap 95% CI: +0.81 to +2.21 points). On 9,222 deduplicated GOP debate tweets, the selected model scored **60.91% accuracy / 59.09% macro-F1**. These are research results, **not the performance of the live app**: the fine-tuned Cardiff checkpoint was not preserved in the exported archive. The app uses the separately published DistilRoBERTa checkpoint. The Streamlit deployment has not yet been verified.
 
 ## Contents
 [Problem](#problem) · [Data](#data) · [Results](#verified-results) · [Error analysis](#error-analysis) ·
@@ -48,7 +44,7 @@ every model.
 | TF-IDF + LinearSVC (author's retrain, untuned) | – | – | – | 57.38 | – | – |
 | **TF-IDF word+char + LinearSVC (B1, this repo)** | validation, 32 configs | 70.45 | 67.97 | **63.16** [62.25, 64.03] | **62.62** [61.68, 63.54] | 63.28 |
 | **DistilRoBERTa, deployed model** | validation | 72.60\* | 70.85\* | **70.41** | **70.44** | 72.22 |
-| Transformer suite (6 architectures + large + ensembles) | validation | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| Selected Cardiff Twitter-RoBERTa (research only; weights not preserved) | validation (2,000 tweets) | 77.05 | 75.71 | **71.96** | **72.03** | 73.64 |
 
 Brackets are 95% bootstrap CIs. \*Measured on a random half of validation (1,000 tweets).
 Deployed-model test metrics are re-derived from the recorded confusion matrix in `tests/test_metrics.py`.
@@ -57,7 +53,8 @@ Deployed-model test metrics are re-derived from the recorded confusion matrix in
 | Model | GOP-full acc | GOP-full macro-F1 | GOP-high-agreement acc | GOP-high-agreement macro-F1 |
 |---|---:|---:|---:|---:|
 | B1 TF-IDF baseline | 55.35 [54.37, 56.40] | 50.49 [49.44, 51.57] | 64.34 [62.72, 65.84] | 55.32 [53.42, 57.11] |
-| DistilRoBERTa (deployed) | ⏳ | ⏳ | ⏳ | ⏳ |
+| Original DistilRoBERTa (evaluated alongside selected model) | 59.62 | 57.07 | See archived evaluation | See archived evaluation |
+| Selected Cardiff Twitter-RoBERTa (research only) | **60.91** | **59.09** | See archived evaluation | See archived evaluation |
 | Selected transformer | ⏳ | ⏳ | ⏳ | ⏳ |
 
 Even for the baseline, general-tweet performance does **not** carry over to election tweets
@@ -137,7 +134,7 @@ streamlit run app.py
 * **Model information**: metrics loaded from `reports/model_card_metrics.json`, plus limitations.
 
 `SENTIMENT_MODEL_ID` selects another checkpoint. `SENTIMENT_FAKE_MODEL=1` runs an offline keyword stub
-for UI tests. The app still serves the original production model; replacing it requires the owner's approval.
+for UI tests. The app serves the original published DistilRoBERTa checkpoint. The selected Cardiff model's fine-tuned weights were not retained; its experimental results are presented separately and must not be described as live-model performance.
 
 ## Limitations
 * Trained on 2013–2017 general tweets; election language, new slang and events differ (see the GOP results).
